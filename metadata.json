@@ -1,0 +1,6 @@
+{
+  "name": "Catatan Seorang Guru",
+  "description": "Aplikasi Web Administrasi Guru Modern, Responsif, dan Terintegrasi dengan Google Spreadsheet & Drive",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
