@@ -1,5 +1,18 @@
+export type UserRole = 'admin' | 'guru';
+
+export interface AppUser {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  createdAt: string;
+  password?: string;
+  password_hash?: string;
+}
+
 export type ActiveTab =
   | 'dashboard'
+  | 'user_management'
   | 'sekolah'
   | 'profil'
   | 'konfigurasi'

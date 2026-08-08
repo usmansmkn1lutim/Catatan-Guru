@@ -9,6 +9,7 @@ import {
   PresensiRecord,
   NilaiRecord,
   JurnalRecord,
+  AppUser,
 } from './types';
 import {
   initialAppConfig,
@@ -26,9 +27,13 @@ import {
   saveToStorage,
   saveAllAppDataToGas,
   loadAppDataFromGas,
+  loadSessionUser,
+  saveSessionUser,
 } from './lib/storage';
 import { CODE_GS_TEMPLATE, INDEX_HTML_TEMPLATE } from './lib/gasCode';
 
+import { AuthLanding } from './components/AuthLanding';
+import { UserManagementView } from './components/UserManagement';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
@@ -55,7 +60,11 @@ import {
 } from 'lucide-react';
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<string>('dashboard');
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(() => loadSessionUser());
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    const user = loadSessionUser();
+    return user?.role === 'admin' ? 'user_management' : 'dashboard';
+  });
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     return localStorage.getItem('theme_mode') === 'dark';
@@ -193,6 +202,30 @@ export function App() {
     showToast('Kode berhasil disalin ke clipboard!', 'success');
   };
 
+  const handleLogout = () => {
+    saveSessionUser(null);
+    setCurrentUser(null);
+    showToast('Sesi telah diakhiri. Sampai jumpa!', 'success');
+  };
+
+  // If no user session is active, display Landing Auth Page
+  if (!currentUser) {
+    return (
+      <AuthLanding
+        onLoginSuccess={(user) => {
+          setCurrentUser(user);
+          saveSessionUser(user);
+          if (user.role === 'admin') {
+            setActiveTab('user_management');
+          } else {
+            setActiveTab('dashboard');
+          }
+        }}
+        showToast={showToast}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex font-sans antialiased">
       {/* Toast Notification (Fixed Position) */}
@@ -224,8 +257,10 @@ export function App() {
       <Sidebar
         appConfig={appConfig}
         sekolah={dataSekolah}
-        activeTab={activeTab}
-        onSelectTab={setActiveTab}
+        currentUser={currentUser}
+        activeTab={activeTab as any}
+        onSelectTab={(tab) => setActiveTab(tab)}
+        onLogout={handleLogout}
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
@@ -236,15 +271,24 @@ export function App() {
         <Header
           dataSekolah={dataSekolah}
           profilGuru={profilGuru}
+          currentUser={currentUser}
           darkMode={darkMode}
           onToggleDarkMode={() => setDarkMode(!darkMode)}
-          setActiveTab={setActiveTab}
+          setActiveTab={(tab) => setActiveTab(tab)}
           onSyncData={handleSyncData}
+          onLogout={handleLogout}
           isSyncing={isSyncing}
         />
 
         {/* Page Views Routing */}
         <main className="flex-1 p-4 sm:p-6 md:p-8 max-w-7xl mx-auto w-full">
+          {activeTab === 'user_management' && currentUser?.role === 'admin' && (
+            <UserManagementView
+              currentUser={currentUser}
+              showToast={showToast}
+            />
+          )}
+
           {activeTab === 'dashboard' && (
             <Dashboard
               dataSekolah={dataSekolah}

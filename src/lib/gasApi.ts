@@ -156,12 +156,76 @@ export async function saveAppDataToGasUrl(url: string, data: GasSyncPayload): Pr
 /**
  * Membaca / Mengimpor data dari Google Spreadsheet via GAS
  */
-export async function loadAppDataFromGasUrl(url: string): Promise<GasSyncPayload | null> {
+export async function loadAppDataFromGasUrl(url: string, userEmail?: string): Promise<GasSyncPayload | null> {
   const result = await callGasEndpoint(url, {
     action: 'load',
+    userEmail: userEmail,
   });
   if (result && result.status === 'success' && result.data) {
     return result.data;
   }
   return null;
+}
+
+/**
+ * Login User via GAS Backend
+ */
+export async function loginUserViaGas(url: string, email: string, password: string): Promise<any> {
+  return await callGasEndpoint(url, {
+    action: 'login',
+    email: email,
+    password: password,
+  });
+}
+
+/**
+ * Register User Baru via GAS Backend
+ */
+export async function registerUserViaGas(url: string, name: string, email: string, password: string): Promise<any> {
+  return await callGasEndpoint(url, {
+    action: 'register',
+    name: name,
+    email: email,
+    password: password,
+    role: 'guru',
+  });
+}
+
+/**
+ * Mengambil daftar User dari Sheet 'Users' (Admin)
+ */
+export async function getUsersViaGas(url: string): Promise<any> {
+  return await callGasEndpoint(url, {
+    action: 'getUsers',
+  });
+}
+
+/**
+ * Tambah User oleh Admin
+ */
+export async function addUserViaGas(url: string, userData: { name: string; email: string; password: string; role: 'admin' | 'guru' }): Promise<any> {
+  return await callGasEndpoint(url, {
+    action: 'addUser',
+    user: userData,
+  });
+}
+
+/**
+ * Update / Reset Password User oleh Admin
+ */
+export async function updateUserViaGas(url: string, userData: { id: string; name: string; email: string; password?: string; role: 'admin' | 'guru' }): Promise<any> {
+  return await callGasEndpoint(url, {
+    action: 'updateUser',
+    user: userData,
+  });
+}
+
+/**
+ * Hapus User oleh Admin
+ */
+export async function deleteUserViaGas(url: string, userId: string): Promise<any> {
+  return await callGasEndpoint(url, {
+    action: 'deleteUser',
+    userId: userId,
+  });
 }

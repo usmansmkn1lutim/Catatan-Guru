@@ -45,6 +45,32 @@ function doPost(e) {
       return responseJson({ status: "success", message: "Google Apps Script Web App Terhubung!" });
     }
 
+    if (action === "login") {
+      return responseJson(handleLoginUser(contents.email, contents.password));
+    }
+
+    if (action === "register") {
+      return responseJson(handleRegisterUser(contents.name, contents.email, contents.password, contents.role || "guru"));
+    }
+
+    if (action === "getUsers") {
+      return responseJson({ status: "success", users: getUsersListFromSheet() });
+    }
+
+    if (action === "addUser") {
+      var u = contents.user || {};
+      return responseJson(handleAddUserByAdmin(u.name, u.email, u.password, u.role || "guru"));
+    }
+
+    if (action === "updateUser") {
+      var u = contents.user || {};
+      return responseJson(handleUpdateUserByAdmin(u.id, u.name, u.email, u.password, u.role));
+    }
+
+    if (action === "deleteUser") {
+      return responseJson(handleDeleteUserByAdmin(contents.userId));
+    }
+
     if (action === "save" || action === "export") {
       var saveResult = saveAppDataFull(contents.data || contents);
       return responseJson(saveResult);
@@ -59,6 +85,128 @@ function doPost(e) {
   } catch (err) {
     return responseJson({ status: "error", message: err.toString() });
   }
+}
+
+// User Management Helper Functions for Apps Script
+function getUsersSheet() {
+  var ss = getSpreadsheet();
+  var sheet = ss.getSheetByName("Users");
+  if (!sheet) {
+    sheet = ss.insertSheet("Users");
+    sheet.getRange(1, 1, 1, 6).setValues([["id", "name", "email", "password_hash", "role", "created_at"]]).setFontWeight("bold").setBackground("#f1f5f9");
+    sheet.setFrozenRows(1);
+    // Seed default Admin
+    var defaultAdminId = "usr-admin-" + new Date().getTime();
+    var defaultDate = new Date().toISOString().split('T')[0];
+    sheet.appendRow([defaultAdminId, "Administrator Utama", "admin@sekolah.sch.id", "admin123", "admin", defaultDate]);
+  }
+  return sheet;
+}
+
+function getUsersListFromSheet() {
+  var sheet = getUsersSheet();
+  var lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return [];
+  var data = sheet.getRange(2, 1, lastRow - 1, 6).getValues();
+  var users = [];
+  for (var i = 0; i < data.length; i++) {
+    var row = data[i];
+    if (row[0] && row[2]) {
+      users.push({
+        id: String(row[0]),
+        name: String(row[1] || ""),
+        email: String(row[2] || ""),
+        role: String(row[4] || "guru"),
+        createdAt: String(row[5] || ""),
+      });
+    }
+  }
+  return users;
+}
+
+function handleLoginUser(email, password) {
+  if (!email || !password) return { status: "error", message: "Email dan password wajib diisi" };
+  var sheet = getUsersSheet();
+  var lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return { status: "error", message: "User tidak ditemukan" };
+  var data = sheet.getRange(2, 1, lastRow - 1, 6).getValues();
+  for (var i = 0; i < data.length; i++) {
+    var row = data[i];
+    var uEmail = String(row[2] || "").trim().toLowerCase();
+    var uPass = String(row[3] || "");
+    if (uEmail === String(email).trim().toLowerCase() && uPass === String(password)) {
+      return {
+        status: "success",
+        user: {
+          id: String(row[0]),
+          name: String(row[1]),
+          email: String(row[2]),
+          role: String(row[4] || "guru"),
+          createdAt: String(row[5] || ""),
+        }
+      };
+    }
+  }
+  return { status: "error", message: "Email atau password salah!" };
+}
+
+function handleRegisterUser(name, email, password, role) {
+  if (!name || !email || !password) return { status: "error", message: "Nama, email, dan password wajib diisi" };
+  var sheet = getUsersSheet();
+  var lastRow = sheet.getLastRow();
+  if (lastRow > 1) {
+    var data = sheet.getRange(2, 1, lastRow - 1, 6).getValues();
+    for (var i = 0; i < data.length; i++) {
+      if (String(data[i][2]).trim().toLowerCase() === String(email).trim().toLowerCase()) {
+        return { status: "error", message: "Email sudah terdaftar!" };
+      }
+    }
+  }
+  var newId = "usr-" + new Date().getTime();
+  var created = new Date().toISOString().split('T')[0];
+  var finalRole = role === "admin" ? "admin" : "guru";
+  sheet.appendRow([newId, name, email.trim().toLowerCase(), password, finalRole, created]);
+  return {
+    status: "success",
+    message: "Registrasi akun berhasil!",
+    user: { id: newId, name: name, email: email, role: finalRole, createdAt: created }
+  };
+}
+
+function handleAddUserByAdmin(name, email, password, role) {
+  return handleRegisterUser(name, email, password, role);
+}
+
+function handleUpdateUserByAdmin(id, name, email, password, role) {
+  var sheet = getUsersSheet();
+  var lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return { status: "error", message: "User tidak ditemukan" };
+  var data = sheet.getRange(2, 1, lastRow - 1, 6).getValues();
+  for (var i = 0; i < data.length; i++) {
+    if (String(data[i][0]) === String(id)) {
+      var rowNum = i + 2;
+      if (name) sheet.getRange(rowNum, 2).setValue(name);
+      if (email) sheet.getRange(rowNum, 3).setValue(email.trim().toLowerCase());
+      if (password && password.trim() !== "") sheet.getRange(rowNum, 4).setValue(password);
+      if (role) sheet.getRange(rowNum, 5).setValue(role);
+      return { status: "success", message: "Data user berhasil diperbarui!" };
+    }
+  }
+  return { status: "error", message: "User ID tidak ditemukan" };
+}
+
+function handleDeleteUserByAdmin(userId) {
+  var sheet = getUsersSheet();
+  var lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return { status: "error", message: "User tidak ditemukan" };
+  var data = sheet.getRange(2, 1, lastRow - 1, 6).getValues();
+  for (var i = 0; i < data.length; i++) {
+    if (String(data[i][0]) === String(userId)) {
+      sheet.deleteRow(i + 2);
+      return { status: "success", message: "User berhasil dihapus!" };
+    }
+  }
+  return { status: "error", message: "User ID tidak ditemukan" };
 }
 
 function responseJson(obj) {

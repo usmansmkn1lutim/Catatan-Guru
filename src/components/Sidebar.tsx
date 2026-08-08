@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActiveTab, DataSekolah, AppConfig } from '../types';
+import { ActiveTab, DataSekolah, AppConfig, AppUser } from '../types';
 import {
   LayoutDashboard,
   Building2,
@@ -16,14 +16,19 @@ import {
   Menu,
   School,
   Sliders,
+  ShieldCheck,
+  LogOut,
+  User,
 } from 'lucide-react';
 
 interface SidebarProps {
   sekolah?: DataSekolah;
   appConfig?: AppConfig;
+  currentUser?: AppUser | null;
   activeTab: ActiveTab;
   setActiveTab?: (tab: ActiveTab) => void;
   onSelectTab?: (tab: ActiveTab) => void;
+  onLogout?: () => void;
   isOpenMobile?: boolean;
   setIsOpenMobile?: (open: boolean) => void;
   collapsed?: boolean;
@@ -44,9 +49,11 @@ interface MenuGroup {
 export const Sidebar: React.FC<SidebarProps> = ({
   sekolah,
   appConfig,
+  currentUser,
   activeTab,
   setActiveTab,
   onSelectTab,
+  onLogout,
   isOpenMobile = false,
   setIsOpenMobile,
   collapsed = false,
@@ -56,7 +63,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const menuGroups: MenuGroup[] = [
     {
       title: 'UTAMA',
-      items: [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }],
+      items: [
+        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        ...(currentUser?.role === 'admin'
+          ? [{ id: 'user_management' as ActiveTab, label: 'Manajemen User', icon: ShieldCheck }]
+          : []),
+      ],
     },
     {
       title: 'ADMINISTRASI',
@@ -169,11 +181,42 @@ export const Sidebar: React.FC<SidebarProps> = ({
         ))}
       </div>
 
-      {/* Sidebar Footer info */}
-      <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20">
-        <div className="flex items-center space-x-2 text-xs text-slate-500 dark:text-slate-400">
-          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-          <span>Google Sheets Synchronized</span>
+      {/* Sidebar Footer User Info & Logout */}
+      <div className="p-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/40 space-y-2">
+        {currentUser && (
+          <div className="flex items-center justify-between bg-white dark:bg-slate-800 p-2.5 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-2xs">
+            <div className="flex items-center space-x-2.5 min-w-0">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
+                currentUser.role === 'admin'
+                  ? 'bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300'
+                  : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+              }`}>
+                {currentUser.name.charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-slate-800 dark:text-white truncate">{currentUser.name}</p>
+                <p className="text-[10px] font-semibold text-slate-400 capitalize">{currentUser.role === 'admin' ? 'Administrator' : 'Guru Pengajar'}</p>
+              </div>
+            </div>
+
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                title="Keluar Sesi"
+                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-xl transition-colors shrink-0"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        )}
+
+        <div className="flex items-center justify-between px-1 text-[11px] text-slate-400">
+          <div className="flex items-center space-x-1.5">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+            <span>Auto Sync Ready</span>
+          </div>
+          <span className="font-mono text-[10px]">v1.0</span>
         </div>
       </div>
     </div>

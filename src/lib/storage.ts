@@ -7,6 +7,7 @@ import {
   PresensiRecord,
   NilaiRecord,
   JurnalRecord,
+  AppUser,
 } from '../types';
 import {
   initialDataSekolah,
@@ -52,6 +53,49 @@ export function saveToStorage<T>(key: string, value: T): void {
   } catch (e) {
     console.error('Error writing localStorage key:', key, e);
   }
+}
+
+// Session & Users Storage
+const SESSION_KEY = 'session_user_v1';
+const USERS_KEY = 'users_list_v1';
+
+export const INITIAL_USERS: AppUser[] = [
+  {
+    id: 'usr-admin-1',
+    name: 'Administrator Utama',
+    email: 'admin@sekolah.sch.id',
+    role: 'admin',
+    password: 'admin123',
+    createdAt: '2026-01-01',
+  },
+  {
+    id: 'usr-guru-1',
+    name: 'Drs. Bambang Haryanto',
+    email: 'bambang@sekolah.sch.id',
+    role: 'guru',
+    password: 'guru123',
+    createdAt: '2026-01-01',
+  },
+];
+
+export function loadSessionUser(): AppUser | null {
+  return loadFromStorage<AppUser | null>(SESSION_KEY, null);
+}
+
+export function saveSessionUser(user: AppUser | null): void {
+  if (!user) {
+    localStorage.removeItem(`catatan_guru_${SESSION_KEY}_v1`);
+  } else {
+    saveToStorage(SESSION_KEY, user);
+  }
+}
+
+export function loadUsersList(): AppUser[] {
+  return loadFromStorage<AppUser[]>(USERS_KEY, INITIAL_USERS);
+}
+
+export function saveUsersList(users: AppUser[]): void {
+  saveToStorage(USERS_KEY, users);
 }
 
 // Data Getters & Setters
